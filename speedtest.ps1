@@ -1,39 +1,33 @@
-# Define a test file (100MB file from Microsoft/Azure CDNs)
-$testUrl = "https://speedtest.tele2.net/100MB.zip"
+# Set TLS 1.2/1.3 to ensure the connection isn't blocked by old security protocols
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
+# Using a reliable 100MB test file from Cloudflare
+$url = "https://speed.cloudflare.com/__down?bytes=104857600"
 $tempFile = "$env:TEMP\speedtest.tmp"
 
-Write-Host "Starting download speed test... please wait." -ForegroundColor Cyan
+Write-Host "Connecting to Cloudflare edge..." -ForegroundColor Cyan
 
 try {
-    $webClient = New-Object System.Net.WebClient
-    
-    # Start the stopwatch
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
     
-    # Download the file
-    $webClient.DownloadFile($testUrl, $tempFile)
+    # Downloading using the built-in web request
+    Invoke-WebRequest -Uri $url -OutFile $tempFile -UseBasicParsing
     
-    # Stop the stopwatch
     $stopwatch.Stop()
     
-    # Get file size in bits
-    $fileSizeInBytes = (Get-Item $tempFile).Length
-    $fileSizeInBits = $fileSizeInBytes * 8
-    
-    # Calculate Mbps (Megabits per second)
+    $sizeInBits = (Get-Item $tempFile).Length * 8
     $elapsedSeconds = $stopwatch.Elapsed.TotalSeconds
-    $speedMbps = [Math]::Round(($fileSizeInBits / $elapsedSeconds) / 1Mb, 2)
+    $speedMbps = [Math]::Round(($sizeInBits / $elapsedSeconds) / 1Mb, 2)
     
-    Write-Host "`nTest Results:" -ForegroundColor Green
-    Write-Host "--------------------------"
+    Write-Host "`n--- Speed Test Complete ---" -ForegroundColor Green
     Write-Host "Download Speed: $speedMbps Mbps"
-    Write-Host "Time Elapsed:   $([Math]::Round($elapsedSeconds, 2)) seconds"
-    Write-Host "--------------------------"
+    Write-Host "Time Taken:     $([Math]::Round($elapsedSeconds, 2))s"
 }
 catch {
-    Write-Host "An error occurred: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "`nConnection Failed." -ForegroundColor Red
+    Write-Host "Reason: $($_.Exception.Message)"
+    Write-Host "Note: Ensure your firewall allows outbound HTTPS traffic."
 }
 finally {
-    # Clean up the temp file
-    if (Test-Path $tempFile) { Remove-Item $tempFile }
+    if (Test-Path $tempFile) { Remove-Item $tempFile -ErrorAction SilentlyContinue }
 }
