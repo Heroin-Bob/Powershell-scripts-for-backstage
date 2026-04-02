@@ -1,6 +1,14 @@
 # ==============================================================================
-# IT BACKSTAGE MASTER MENU (DEEP CATCH VERSION)
+# IT BACKSTAGE MASTER MENU (WITH LOGGING)
 # ==============================================================================
+
+# Define the log path
+$LogPath = Join-Path $HOME "Downloads\MasterLog.txt"
+
+# Start the transcript (Logging)
+# -Append ensures we don't overwrite previous errors
+# -Force ensures it creates the folder/file if needed
+Start-Transcript -Path $LogPath -Append -Confirm:$false
 
 $ScriptList = @(
     @{ Name = "Printer Management"; Url = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/printers.ps1" }
@@ -12,6 +20,7 @@ function Show-Menu {
     Clear-Host
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host "       IT BACKSTAGE MASTER MENU           " -ForegroundColor White
+    Write-Host "       Logging to: Downloads\MasterLog.txt" -ForegroundColor Gray
     Write-Host "==========================================" -ForegroundColor Cyan
     for ($i = 0; $i -lt $ScriptList.Count; $i++) {
         Write-Host (" {0}. {1}" -f ($i + 1), $ScriptList[$i].Name)
@@ -21,41 +30,36 @@ function Show-Menu {
     Write-Host "==========================================" -ForegroundColor Cyan
 }
 
-while ($true) {
-    Show-Menu
-    $Selection = Read-Host "`nSelect an option"
+try {
+    while ($true) {
+        Show-Menu
+        $Selection = Read-Host "`nSelect an option"
 
-    if ($Selection -eq 'q') { break }
+        if ($Selection -eq 'q') { break }
 
-    if ([int]::TryParse($Selection, [ref]$idx) -and $idx -le $ScriptList.Count -and $idx -gt 0) {
-        $Target = $ScriptList[$idx - 1]
-        
-        Write-Host "`n[i] Attempting to execute: $($Target.Name)..." -ForegroundColor Magenta
-        
-        # We wrap the execution in a script block & use the '&' operator 
-        # This keeps the sub-script's 'exit' commands from killing the master menu
-        & {
-            try {
-                $code = Invoke-RestMethod $Target.Url -ErrorAction Stop
-                Invoke-Expression $code
+        if ([int]::TryParse($Selection, [ref]$idx) -and $idx -le $ScriptList.Count -and $idx -gt 0) {
+            $Target = $ScriptList[$idx - 1]
+            
+            Write-Host "`n[i] Executing: $($Target.Name)..." -ForegroundColor Magenta
+            
+            & {
+                try {
+                    $code = Invoke-RestMethod $Target.Url -ErrorAction Stop
+                    Invoke-Expression $code
+                }
+                catch {
+                    Write-Host "`n[!] ERROR DETECTED:" -ForegroundColor Red
+                    $_.Exception.Message | Out-Default # Forces error to console AND log
+                }
             }
-            catch {
-                Write-Host "`n[!] EXECUTION ERROR:" -ForegroundColor Red
-                Write-Host $_.Exception.Message -ForegroundColor White
-                Write-Host "`nStack Trace for Debugging:" -ForegroundColor Gray
-                Write-Host $_.ScriptStackTrace -ForegroundColor Gray
-                
-                # Mandatory 5-second hold so you CANNOT miss the message
-                Write-Host "`n[!] Screen is locked for 5 seconds to allow reading error..." -ForegroundColor Yellow
-                Start-Sleep -Seconds 5
-            }
+
+            Write-Host "`n------------------------------------------" -ForegroundColor Cyan
+            Read-Host "Done. Press ENTER to return to the Master Menu"
         }
-
-        Write-Host "`n------------------------------------------" -ForegroundColor Cyan
-        Read-Host "Done. Press ENTER to return to the Master Menu"
     }
-    else {
-        Write-Host "Invalid selection." -ForegroundColor Red
-        Start-Sleep -Seconds 1
-    }
+}
+finally {
+    # Stop the transcript when the user quits or the script crashes
+    Stop-Transcript
+    Write-Host "Log saved to: $LogPath" -ForegroundColor Green
 }
