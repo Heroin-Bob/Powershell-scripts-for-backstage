@@ -1,19 +1,15 @@
 # ==============================================================================
-# IT BACKSTAGE MASTER MENU (BULLETPROOF LOGGING)
+# IT BACKSTAGE MASTER MENU (MANUAL LOGGING)
 # ==============================================================================
 
-# 1. Set a guaranteed path (Windows Temp folder)
-$LogPath = "$env:TEMP\MasterMenu_Debug.txt"
+# 1. Setup Manual Log
+$LogPath = "$env:TEMP\MasterMenu_Manual.txt"
+"--- New Session Started: $(Get-Date) ---" | Out-File -FilePath $LogPath -Append
 
-# 2. Force start the log and verify
-try {
-    Stop-Transcript -ErrorAction SilentlyContinue
-    Start-Transcript -Path $LogPath -Append -Force
-    Write-Host "LOGGING STARTED AT: $LogPath" -ForegroundColor Green
-}
-catch {
-    Write-Host "CANNOT START LOG: $($_.Exception.Message)" -ForegroundColor Red
-    Pause
+function Write-Log {
+    param([string]$Message)
+    $TimeStamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "[$TimeStamp] $Message" | Out-File -FilePath $LogPath -Append
 }
 
 $ScriptList = @(
@@ -26,7 +22,7 @@ function Show-Menu {
     Clear-Host
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host "       IT BACKSTAGE MASTER MENU           " -ForegroundColor White
-    Write-Host "       LOG: $LogPath" -ForegroundColor DarkGray
+    Write-Host "       LOGGING TO: $LogPath" -ForegroundColor Yellow
     Write-Host "==========================================" -ForegroundColor Cyan
     for ($i = 0; $i -lt $ScriptList.Count; $i++) {
         Write-Host (" {0}. {1}" -f ($i + 1), $ScriptList[$i].Name)
@@ -40,27 +36,35 @@ while ($true) {
     Show-Menu
     $Selection = Read-Host "`nSelect an option"
 
-    if ($Selection -eq 'q') { break }
+    if ($Selection -eq 'q') { 
+        Write-Log "User exited script."
+        break 
+    }
 
     if ([int]::TryParse($Selection, [ref]$idx) -and $idx -le $ScriptList.Count -and $idx -gt 0) {
         $Target = $ScriptList[$idx - 1]
         Write-Host "`n[i] Loading: $($Target.Name)..." -ForegroundColor Magenta
+        Write-Log "Attempting to load: $($Target.Name) from $($Target.Url)"
         
         & {
             try {
                 $code = Invoke-RestMethod $Target.Url -ErrorAction Stop
+                Write-Log "Download successful. Executing code..."
                 Invoke-Expression $code
             }
             catch {
+                $Err = $_.Exception.Message
                 Write-Host "`n[!] SCRIPT ERROR:" -ForegroundColor Red
-                $_.Exception.Message | Out-Default
-                Write-Host "`nCheck log for full details: $LogPath" -ForegroundColor Yellow
+                Write-Host $Err -ForegroundColor White
+                Write-Log "ERROR: $Err"
+                Write-Log "Stack: $($_.ScriptStackTrace)"
                 Start-Sleep -Seconds 3
             }
         }
         Write-Host "`n------------------------------------------" -ForegroundColor Cyan
         Read-Host "Done. Press ENTER to return to the Master Menu"
     }
+    else {
+        Write-Log "Invalid user input: $Selection"
+    }
 }
-
-Stop-Transcript
