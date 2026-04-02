@@ -1,59 +1,58 @@
-function Show-MainMenu {
-    Write-Host ""
-    Write-Host "--- Printer Management Menu ---"
-    Write-Host "1. List Printers"
-    Write-Host "2. Remove Printers"
-    Write-Host "3. Exit"
-    Write-Host ""
+# =============================================================
+# PRINTER MANAGEMENT UTILITY (Master Menu Compatible)
+# =============================================================
+
+function Show-PrinterMenu {
+    Clear-Host
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host "       PRINTER MANAGEMENT TOOLS           " -ForegroundColor White
+    Write-Host "==========================================" -ForegroundColor Cyan
+    Write-Host " 1. List All Installed Printers"
+    Write-Host " 2. List Printer Drivers"
+    Write-Host " 3. View Print Jobs"
+    Write-Host " 4. Restart Print Spooler"
+    Write-Host " 5. Open Control Panel Printers"
+    Write-Host "------------------------------------------"
+    Write-Host " R. Return to Master Menu"
+    Write-Host "==========================================" -ForegroundColor Cyan
 }
 
-$running = $true
+while ($true) {
+    Show-PrinterMenu
+    $Choice = Read-Host "`nSelect an option"
 
-while ($running) {
-    Show-MainMenu
-    $choice = Read-Host "Select an option (1-3)"
-
-    switch ($choice) {
+    switch ($Choice) {
         "1" {
-            Write-Host ""
-            Get-Printer | Select-Object Name, PrinterStatus, DriverName | Format-Table -AutoSize
-            Write-Host ""
+            Get-Printer | Select-Object Name, DriverName, PortName, PrinterStatus | Format-Table -AutoSize
         }
         "2" {
-            Write-Host ""
-            $printers = Get-Printer | Select-Object Name
-            
-            if ($printers.Count -eq 0) {
-                Write-Host "No printers found to remove."
-            } else {
-                for ($i = 0; $i -lt $printers.Count; $i++) {
-                    Write-Host "$($i + 1). $($printers[$i].Name)"
-                }
-                Write-Host ""
-                
-                $selection = Read-Host "Enter the number of the printer to remove (or 'C' to cancel)"
-                
-                if ($selection -match '^\d+$') {
-                    $index = [int]$selection - 1
-                    if ($index -ge 0 -and $index -lt $printers.Count) {
-                        $targetPrinter = $printers[$index].Name
-                        Remove-Printer -Name $targetPrinter
-                        Write-Host "Successfully removed: $targetPrinter"
-                    } else {
-                        Write-Host "Invalid selection."
-                    }
-                } else {
-                    Write-Host "Operation cancelled."
-                }
-            }
-            Write-Host ""
+            Get-PrinterDriver | Select-Object Name, PrinterEnvironment, DriverPath | Format-Table -AutoSize
         }
         "3" {
-            Write-Host "`nExiting script...`n"
-            $running = $false
+            Get-PrintJob | Select-Object PrinterName, ID, DocumentName, JobStatus | Format-Table -AutoSize
+        }
+        "4" {
+            Write-Host "Restarting Spooler..." -ForegroundColor Yellow
+            Restart-Service -Name Spooler -Force
+            Write-Host "Spooler restarted successfully." -ForegroundColor Green
+        }
+        "5" {
+            Write-Host "Opening Control Panel..." -ForegroundColor Yellow
+            control printers
+        }
+        "r" {
+            # IMPORTANT: Use 'return' so it goes back to the Master Menu
+            # Do NOT use 'exit' or it will close the entire PowerShell window
+            return 
         }
         Default {
-            Write-Host "`nInvalid option, please try again.`n"
+            Write-Host "Invalid selection, try again." -ForegroundColor Red
+            Start-Sleep -Seconds 1
+            continue
         }
     }
+
+    # --- THE FIX: This keeps the info on screen until YOU are ready ---
+    Write-Host "`n------------------------------------------" -ForegroundColor Gray
+    Read-Host "Action complete. Press ENTER to return to Printer Menu"
 }
