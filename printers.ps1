@@ -9,7 +9,7 @@ function Show-PrinterMenu {
     Write-Host " 4. Restart Print Spooler"
     Write-Host " 5. Open Control Panel Printers"
     Write-Host "------------------------------------------"
-    Write-Host " R. Return to Master Menu"
+    Write-Host " Q. Quit"
     Write-Host "==========================================" -ForegroundColor Cyan
 }
 
@@ -36,7 +36,7 @@ while ($true) {
             Write-Host "Opening Control Panel..." -ForegroundColor Yellow
             control printers
         }
-        "r" {
+        "q" {
             return 
         }
         Default {
