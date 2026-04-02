@@ -1,22 +1,11 @@
 # ==============================================================================
-# IT BACKSTAGE MASTER MENU
+# IT BACKSTAGE MASTER MENU (DEEP CATCH VERSION)
 # ==============================================================================
 
-# --- CONFIGURATION: Add or remove scripts here ---
-# Simply add a new line: @{ Name = "Your Description"; Url = "Raw_GitHub_Link" }
 $ScriptList = @(
-    @{ 
-        Name = "Printer Management"
-        Url  = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/printers.ps1" 
-    }
-    @{ 
-        Name = "Spam Filter Tools"
-        Url  = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/spamfilter.ps1" 
-    }
-    @{ 
-        Name = "Network Speedtest"
-        Url  = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/speedtest.ps1" 
-    }
+    @{ Name = "Printer Management"; Url = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/printers.ps1" }
+    @{ Name = "Spam Filter Tools";  Url = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/spamfilter.ps1" }
+    @{ Name = "Network Speedtest";  Url = "https://raw.githubusercontent.com/Heroin-Bob/Powershell-scripts-for-backstage/main/speedtest.ps1" }
 )
 
 function Show-Menu {
@@ -24,53 +13,49 @@ function Show-Menu {
     Write-Host "==========================================" -ForegroundColor Cyan
     Write-Host "       IT BACKSTAGE MASTER MENU           " -ForegroundColor White
     Write-Host "==========================================" -ForegroundColor Cyan
-    
     for ($i = 0; $i -lt $ScriptList.Count; $i++) {
-        # Formats the list with numbers starting at 1
         Write-Host (" {0}. {1}" -f ($i + 1), $ScriptList[$i].Name)
     }
-    
     Write-Host "------------------------------------------" -ForegroundColor Cyan
-    Write-Host " Q. Quit / Exit"
+    Write-Host " Q. Quit"
     Write-Host "==========================================" -ForegroundColor Cyan
 }
 
-# --- MAIN LOOP ---
 while ($true) {
     Show-Menu
     $Selection = Read-Host "`nSelect an option"
 
-    # Handle Exit
-    if ($Selection -eq 'q') { 
-        Write-Host "Exiting..." -ForegroundColor Yellow
-        break 
-    }
+    if ($Selection -eq 'q') { break }
 
-    # Validate numeric input and check if it's within the array range
     if ([int]::TryParse($Selection, [ref]$idx) -and $idx -le $ScriptList.Count -and $idx -gt 0) {
         $Target = $ScriptList[$idx - 1]
         
-        Write-Host "`n[i] Calling: $($Target.Name)..." -ForegroundColor Magenta
-        Write-Host "[i] URL: $($Target.Url)" -ForegroundColor DarkGray
-        Write-Host "------------------------------------------`n"
+        Write-Host "`n[i] Attempting to execute: $($Target.Name)..." -ForegroundColor Magenta
         
-        try {
-            # irm (Invoke-RestMethod) grabs the raw text
-            # iex (Invoke-Expression) runs that text as a command
-            irm $Target.Url -ErrorAction Stop | iex
-        }
-        catch {
-            Write-Host "`n[!] CRITICAL ERROR DURING EXECUTION:" -ForegroundColor Red
-            Write-Host $_.Exception.Message -ForegroundColor White
+        # We wrap the execution in a script block & use the '&' operator 
+        # This keeps the sub-script's 'exit' commands from killing the master menu
+        & {
+            try {
+                $code = Invoke-RestMethod $Target.Url -ErrorAction Stop
+                Invoke-Expression $code
+            }
+            catch {
+                Write-Host "`n[!] EXECUTION ERROR:" -ForegroundColor Red
+                Write-Host $_.Exception.Message -ForegroundColor White
+                Write-Host "`nStack Trace for Debugging:" -ForegroundColor Gray
+                Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+                
+                # Mandatory 5-second hold so you CANNOT miss the message
+                Write-Host "`n[!] Screen is locked for 5 seconds to allow reading error..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 5
+            }
         }
 
-        # --- THE FIX: This pause prevents the screen from clearing immediately ---
         Write-Host "`n------------------------------------------" -ForegroundColor Cyan
-        Write-Host "Script execution finished or interrupted." -ForegroundColor Gray
-        Read-Host "Press ENTER to return to the Master Menu"
+        Read-Host "Done. Press ENTER to return to the Master Menu"
     }
     else {
-        Write-Host "Invalid selection. Please choose a number from the list or 'Q'." -ForegroundColor Red
-        Start-Sleep -Seconds 2
+        Write-Host "Invalid selection." -ForegroundColor Red
+        Start-Sleep -Seconds 1
     }
 }
