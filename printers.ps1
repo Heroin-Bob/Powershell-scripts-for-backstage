@@ -1,7 +1,3 @@
-# =============================================================
-# PRINTER MANAGEMENT UTILITY (Master Menu Compatible)
-# =============================================================
-
 function Show-PrinterMenu {
     Clear-Host
     Write-Host "==========================================" -ForegroundColor Cyan
@@ -41,8 +37,6 @@ while ($true) {
             control printers
         }
         "r" {
-            # IMPORTANT: Use 'return' so it goes back to the Master Menu
-            # Do NOT use 'exit' or it will close the entire PowerShell window
             return 
         }
         Default {
@@ -51,8 +45,6 @@ while ($true) {
             continue
         }
     }
-
-    # --- THE FIX: This keeps the info on screen until YOU are ready ---
     Write-Host "`n------------------------------------------" -ForegroundColor Gray
     Read-Host "Action complete. Press ENTER to return to Printer Menu"
 }
