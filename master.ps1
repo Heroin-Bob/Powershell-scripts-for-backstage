@@ -1,0 +1,277 @@
+<#
+.SYNOPSIS
+    DOS-Style Utility Dashboard
+.DESCRIPTION
+    Consolidates Admin, Network, Printer, and User Management tasks into an interactive CLI GUI.
+#>
+
+# ==========================================
+# ELEVATION CHECK
+# ==========================================
+$isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Write-Host "`n[WARNING] Running without Administrator privileges." -ForegroundColor Yellow
+    Write-Host "Tasks like Spooler restarts and User Account changes will fail unless run as Admin.`n" -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
+}
+
+# ==========================================
+# HELPER FUNCTIONS
+# ==========================================
+function Pause-Menu {
+    param([string]$MenuName = "Menu")
+    Write-Host "`n------------------------------------------" -ForegroundColor Gray
+    Read-Host "Action complete. Press ENTER to return to $MenuName"
+}
+
+# ==========================================
+# SUB-MENU: PRINTER MANAGEMENT
+# ==========================================
+function Show-PrinterMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "        PRINTER MANAGEMENT TOOLS          " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. List All Installed Printers"
+        Write-Host " 2. List Printer Drivers"
+        Write-Host " 3. View Print Jobs"
+        Write-Host " 4. Restart Print Spooler"
+        Write-Host " 5. Open Control Panel Printers"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Main Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" {
+                Get-Printer | Select-Object Name, DriverName, PortName, PrinterStatus | Format-Table -AutoSize
+            }
+            "2" {
+                Get-PrinterDriver | Select-Object Name, PrinterEnvironment, DriverPath | Format-Table -AutoSize
+            }
+            "3" {
+                Get-PrintJob | Select-Object PrinterName, ID, DocumentName, JobStatus | Format-Table -AutoSize
+            }
+            "4" {
+                Write-Host "Restarting Spooler..." -ForegroundColor Yellow
+                try {
+                    Restart-Service -Name Spooler -Force -ErrorAction Stop
+                    Write-Host "Spooler restarted successfully." -ForegroundColor Green
+                } catch {
+                    Write-Host "Failed to restart Spooler: $_" -ForegroundColor Red
+                }
+            }
+            "5" {
+                Write-Host "Opening Control Panel..." -ForegroundColor Yellow
+                control printers
+            }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+                continue
+            }
+        }
+        Pause-Menu "Printer Menu"
+    }
+}
+
+# ==========================================
+# SUB-MENU: NETWORK & DOMAIN TOOLS
+# ==========================================
+function Show-NetworkMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "         NETWORK & DOMAIN TOOLS           " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. MX Lookup / Identify Spam Filter"
+        Write-Host " 2. View Wi-Fi Interfaces Info"
+        Write-Host " 3. List Saved Wi-Fi Profiles & View Passwords"
+        Write-Host " 4. Scan Nearby Wireless Networks (BSSID)"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Main Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" {
+                $domain = Read-Host "`nEnter the domain"
+                if (-not [string]::IsNullOrWhiteSpace($domain)) {
+                    try {
+                        $mxRecords = Resolve-DnsName -Name $domain -Type MX -ErrorAction Stop
+                        $exchangeString = ($mxRecords.NameExchange) -join " "
+
+                        $filter = switch -Regex ($exchangeString) { 
+                            "mail\.protection\.outlook\.com" { "Microsoft 365" } 
+                            "netsol\.xion\.oxcs\.net"          { "Carrier Zone" } 
+                            "relay1g\.spamh\.com"             { "Zix" } 
+                            "arsmtp\.com"                     { "AppRiver" } 
+                            "proofpoint\.com|ppe-hosted\.com" { "Proofpoint" } 
+                            Default                           { "Unknown / Custom MX" } 
+                        }
+
+                        Write-Host "`nDetected MX Record(s):" -ForegroundColor Cyan
+                        $mxRecords | Select-Object NameExchange, Preference | Format-Table -AutoSize
+                        Write-Host "Spam Filter / Mail Provider: $filter" -ForegroundColor Green
+                    } catch {
+                        Write-Host "`nCould not resolve MX records for '$domain'." -ForegroundColor Red
+                    }
+                }
+            }
+            "2" {
+                Write-Host "`nFetching Wi-Fi Interface Details...`n" -ForegroundColor Yellow
+                netsh wlan show interfaces
+            }
+            "3" {
+                Write-Host "`nSaved Wi-Fi Profiles:`n" -ForegroundColor Yellow
+                netsh wlan show profiles
+                
+                $wifiName = Read-Host "`nEnter profile name to view security key (or press ENTER to skip)"
+                if (-not [string]::IsNullOrWhiteSpace($wifiName)) {
+                    Write-Host "`n------------------------------------------"
+                    netsh wlan show profile name="$wifiName" key=clear
+                }
+            }
+            "4" {
+                Write-Host "`nScanning nearby networks...`n" -ForegroundColor Yellow
+                netsh wlan show networks mode=bssid
+            }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+                continue
+            }
+        }
+        Pause-Menu "Network Menu"
+    }
+}
+
+# ==========================================
+# SUB-MENU: USER & ACCOUNT MANAGEMENT
+# ==========================================
+function Show-UserMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "       USER & ACCOUNT MANAGEMENT          " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. Manage Local Users (Password Reset, Lock, Delete)"
+        Write-Host " 2. View/Modify Local Account Policies"
+        Write-Host " 3. Active Sessions & Logoff Utility (qwinsta/rwinsta)"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Main Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" {
+                Write-Host "`nLocal Users on this Device:`n" -ForegroundColor Yellow
+                net user
+                
+                $targetUser = Read-Host "`nEnter username to manage (or press ENTER to skip)"
+                if (-not [string]::IsNullOrWhiteSpace($targetUser)) {
+                    Write-Host "`nAction for [$targetUser]:" -ForegroundColor Cyan
+                    Write-Host " 1. Reset Password (Masked Input)"
+                    Write-Host " 2. Unlock Account"
+                    Write-Host " 3. Disable/Lock Account"
+                    Write-Host " 4. Delete Account"
+                    $userAction = Read-Host "Select action"
+
+                    switch ($userAction) {
+                        "1" {
+                            $securePass = Read-Host "Enter new password" -AsSecureString
+                            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePass)
+                            $plainPass = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+                            
+                            net user "$targetUser" "$plainPass"
+                        }
+                        "2" {
+                            net user "$targetUser" /active:yes
+                        }
+                        "3" {
+                            net user "$targetUser" /active:no
+                        }
+                        "4" {
+                            $confirm = Read-Host "Are you sure you want to DELETE user '$targetUser'? (Y/N)"
+                            if ($confirm -eq 'Y' -or $confirm -eq 'y') {
+                                net user "$targetUser" /delete
+                            }
+                        }
+                        Default { Write-Host "Cancelled/Invalid option." -ForegroundColor Yellow }
+                    }
+                }
+            }
+            "2" {
+                Write-Host "`nCurrent Account Policies:`n" -ForegroundColor Yellow
+                net accounts
+                
+                Write-Host "`nPolicy Modifications:" -ForegroundColor Cyan
+                Write-Host " 1. Change Max Password Age (/maxpwage)"
+                Write-Host " 2. Skip / Return"
+                $policyChoice = Read-Host "Select option"
+
+                if ($policyChoice -eq "1") {
+                    $days = Read-Host "Enter max password age in days (or UNLIMITED)"
+                    net accounts /maxpwage:$days
+                }
+            }
+            "3" {
+                Write-Host "`nActive User Sessions (qwinsta):`n" -ForegroundColor Yellow
+                qwinsta
+                
+                $sessionID = Read-Host "`nEnter Session ID to log off (or press ENTER to skip)"
+                if (-not [string]::IsNullOrWhiteSpace($sessionID)) {
+                    Write-Host "Logging off session $sessionID..." -ForegroundColor Yellow
+                    rwinsta $sessionID
+                    Write-Host "Session logoff command executed." -ForegroundColor Green
+                }
+            }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+                continue
+            }
+        }
+        Pause-Menu "User Menu"
+    }
+}
+
+# ==========================================
+# MAIN DASHBOARD LOOP
+# ==========================================
+while ($true) {
+    Clear-Host
+    Write-Host "==========================================" -ForegroundColor Green
+    Write-Host "         SYSTEM ADMIN DASHBOARD           " -ForegroundColor White
+    Write-Host "==========================================" -ForegroundColor Green
+    Write-Host " 1. Printer Management"
+    Write-Host " 2. Network & Domain Tools"
+    Write-Host " 3. User & Account Management"
+    Write-Host "------------------------------------------"
+    Write-Host " Q. Quit"
+    Write-Host "==========================================" -ForegroundColor Green
+
+    $MainMenuChoice = Read-Host "`nSelect a Category"
+
+    switch ($MainMenuChoice.ToLower()) {
+        "1" { Show-PrinterMenu }
+        "2" { Show-NetworkMenu }
+        "3" { Show-UserMenu }
+        "q" { 
+            Clear-Host
+            Write-Host "Exiting Dashboard. Have a great day!" -ForegroundColor Green
+            return 
+        }
+        Default {
+            Write-Host "Invalid selection, try again." -ForegroundColor Red
+            Start-Sleep -Seconds 1
+        }
+    }
+}
