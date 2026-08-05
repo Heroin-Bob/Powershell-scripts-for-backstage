@@ -2,7 +2,7 @@
 .SYNOPSIS
     DOS-Style Utility Dashboard
 .DESCRIPTION
-    Consolidates Admin, Network, Printer, and User Management tasks into an interactive CLI GUI.
+    Consolidates Admin, Network, Printer, Services, and User Management tasks into an interactive CLI GUI.
 #>
 
 # ==========================================
@@ -11,7 +11,7 @@
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "`n[WARNING] Running without Administrator privileges." -ForegroundColor Yellow
-    Write-Host "Tasks like Spooler restarts and User Account changes will fail unless run as Admin.`n" -ForegroundColor Yellow
+    Write-Host "Tasks like Spooler restarts, Service state changes, and User Account changes will fail unless run as Admin.`n" -ForegroundColor Yellow
     Start-Sleep -Seconds 2
 }
 
@@ -31,7 +31,7 @@ function Show-PrinterMenu {
     while ($true) {
         Clear-Host
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host "        PRINTER MANAGEMENT TOOLS          " -ForegroundColor White
+        Write-Host "         PRINTER MANAGEMENT TOOLS          " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host " 1. List All Installed Printers"
         Write-Host " 2. List Printer Drivers"
@@ -108,10 +108,10 @@ function Show-NetworkMenu {
                         $filter = switch -Regex ($exchangeString) { 
                             "mail\.protection\.outlook\.com" { "Microsoft 365" } 
                             "netsol\.xion\.oxcs\.net"          { "Carrier Zone" } 
-                            "relay1g\.spamh\.com"             { "Zix" } 
-                            "arsmtp\.com"                     { "AppRiver" } 
+                            "relay1g\.spamh\.com"              { "Zix" } 
+                            "arsmtp\.com"                      { "AppRiver" } 
                             "proofpoint\.com|ppe-hosted\.com" { "Proofpoint" } 
-                            Default                           { "Unknown / Custom MX" } 
+                            Default                            { "Unknown / Custom MX" } 
                         }
 
                         Write-Host "`nDetected MX Record(s):" -ForegroundColor Cyan
@@ -244,6 +244,100 @@ function Show-UserMenu {
 }
 
 # ==========================================
+# SUB-MENU: PC SERVICES MANAGEMENT
+# ==========================================
+function Show-ServicesMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "       PC SERVICES MANAGEMENT             " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. Restart DNS Agent Services"
+        Write-Host " 2. View All Running Services"
+        Write-Host " 3. View All Stopped Services"
+        Write-Host " 4. Search/Filter Services by Name"
+        Write-Host " 5. Check Service Startup Type (Auto, Manual, Disabled)"
+        Write-Host " 6. Restart/Start/Stop Specific Service"
+        Write-Host " 7. Open Services MMC Console (services.msc)"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Main Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" {
+                Write-Host "`nRestarting DNS Agent Services..." -ForegroundColor Yellow
+                try {
+                    Get-Service -DisplayName "DNS Agent", "DNS Agent Service Manager" | Restart-Service -Force -ErrorAction Stop
+                    Write-Host "DNS Agent services restarted successfully." -ForegroundColor Green
+                } catch {
+                    Write-Host "Failed to restart DNS Agent services: $_" -ForegroundColor Red
+                }
+            }
+            "2" {
+                Write-Host "`n--- RUNNING SERVICES ---`n" -ForegroundColor Yellow
+                Get-Service | Where-Object { $_.Status -eq 'Running' } | 
+                    Select-Object Name, DisplayName, Status | Format-Table -AutoSize
+            }
+            "3" {
+                Write-Host "`n--- STOPPED SERVICES ---`n" -ForegroundColor Yellow
+                Get-Service | Where-Object { $_.Status -eq 'Stopped' } | 
+                    Select-Object Name, DisplayName, Status | Format-Table -AutoSize
+            }
+            "4" {
+                $searchTerm = Read-Host "`nEnter service name or display name keyword to search"
+                if (-not [string]::IsNullOrWhiteSpace($searchTerm)) {
+                    Write-Host "`n--- SEARCH RESULTS FOR '$searchTerm' ---`n" -ForegroundColor Yellow
+                    Get-Service | Where-Object { $_.Name -like "*$searchTerm*" -or $_.DisplayName -like "*$searchTerm*" } | 
+                        Select-Object Name, DisplayName, Status, StartType | Format-Table -AutoSize
+                }
+            }
+            "5" {
+                $svcName = Read-Host "`nEnter Service Name (or DisplayName keyword)"
+                if (-not [string]::IsNullOrWhiteSpace($svcName)) {
+                    Write-Host "`n--- SERVICE CONFIGURATION DETAILS ---`n" -ForegroundColor Yellow
+                    Get-Service | Where-Object { $_.Name -like "*$svcName*" -or $_.DisplayName -like "*$svcName*" } | 
+                        Select-Object Name, DisplayName, Status, StartType | Format-Table -AutoSize
+                }
+            }
+            "6" {
+                $targetSvc = Read-Host "`nEnter exact Service Name or Display Name"
+                if (-not [string]::IsNullOrWhiteSpace($targetSvc)) {
+                    Write-Host "`nSelect Action for [$targetSvc]:" -ForegroundColor Cyan
+                    Write-Host " 1. Restart Service"
+                    Write-Host " 2. Start Service"
+                    Write-Host " 3. Stop Service"
+                    $svcAction = Read-Host "Select action"
+
+                    try {
+                        switch ($svcAction) {
+                            "1" { Restart-Service -Name $targetSvc -Force -ErrorAction Stop; Write-Host "Restarted successfully." -ForegroundColor Green }
+                            "2" { Start-Service -Name $targetSvc -ErrorAction Stop; Write-Host "Started successfully." -ForegroundColor Green }
+                            "3" { Stop-Service -Name $targetSvc -Force -ErrorAction Stop; Write-Host "Stopped successfully." -ForegroundColor Green }
+                            Default { Write-Host "Invalid action selected." -ForegroundColor Red }
+                        }
+                    } catch {
+                        Write-Host "Service action failed: $_" -ForegroundColor Red
+                    }
+                }
+            }
+            "7" {
+                Write-Host "Opening Windows Services Management Console..." -ForegroundColor Yellow
+                services.msc
+            }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+                continue
+            }
+        }
+        Pause-Menu "Services Menu"
+    }
+}
+
+# ==========================================
 # MAIN DASHBOARD LOOP
 # ==========================================
 while ($true) {
@@ -254,6 +348,7 @@ while ($true) {
     Write-Host " 1. Printer Management"
     Write-Host " 2. Network & Domain Tools"
     Write-Host " 3. User & Account Management"
+    Write-Host " 4. PC Services"
     Write-Host "------------------------------------------"
     Write-Host " Q. Quit"
     Write-Host "==========================================" -ForegroundColor Green
@@ -264,6 +359,7 @@ while ($true) {
         "1" { Show-PrinterMenu }
         "2" { Show-NetworkMenu }
         "3" { Show-UserMenu }
+        "4" { Show-ServicesMenu }
         "q" { 
             Clear-Host
             Write-Host "Exiting Dashboard. Have a great day!" -ForegroundColor Green
