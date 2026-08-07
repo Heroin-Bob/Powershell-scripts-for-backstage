@@ -2,7 +2,7 @@
 .SYNOPSIS
     DOS-Style Utility Dashboard
 .DESCRIPTION
-    Consolidates Admin, Network, Printer, Services, and User Management tasks into an interactive CLI GUI.
+    Consolidates Admin, Network, Printer, PC Management (Services & Software), and User Management tasks into an interactive CLI GUI.
 #>
 
 # ==========================================
@@ -11,7 +11,7 @@
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "`n[WARNING] Running without Administrator privileges." -ForegroundColor Yellow
-    Write-Host "Tasks like Spooler restarts, Service state changes, and User Account changes will fail unless run as Admin.`n" -ForegroundColor Yellow
+    Write-Host "Tasks like Spooler restarts, Uninstallations, and User Account changes will fail unless run as Admin.`n" -ForegroundColor Yellow
     Start-Sleep -Seconds 2
 }
 
@@ -22,6 +22,22 @@ function Pause-Menu {
     param([string]$MenuName = "Menu")
     Write-Host "`n------------------------------------------" -ForegroundColor Gray
     Read-Host "Action complete. Press ENTER to return to $MenuName"
+}
+
+function Get-InstalledSoftwareList {
+    # Queries 64-bit and 32-bit registry keys for installed apps
+    $regPaths = @(
+        "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+    
+    $apps = Get-ItemProperty $regPaths -ErrorAction SilentlyContinue | 
+        Where-Object { $_.DisplayName -and $_.SystemComponent -ne 1 -and $_.ParentKeyName -eq $null } |
+        Select-Object DisplayName, DisplayVersion, Publisher, UninstallString, QuietUninstallString |
+        Sort-Object DisplayName -Unique
+
+    return $apps
 }
 
 # ==========================================
@@ -260,7 +276,7 @@ function Show-ServicesMenu {
         Write-Host " 6. Restart/Start/Stop Specific Service"
         Write-Host " 7. Open Services MMC Console (services.msc)"
         Write-Host "------------------------------------------"
-        Write-Host " B. Back to Main Menu"
+        Write-Host " B. Back to PC Management Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
         $Choice = Read-Host "`nSelect an option"
@@ -338,6 +354,135 @@ function Show-ServicesMenu {
 }
 
 # ==========================================
+# SUB-MENU: SOFTWARE MANAGEMENT
+# ==========================================
+function Show-SoftwareMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "        SOFTWARE MANAGEMENT               " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. List Installed Software"
+        Write-Host " 2. Uninstall Software"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to PC Management Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" {
+                Write-Host "`nFetching installed software list...`n" -ForegroundColor Yellow
+                $installedApps = Get-InstalledSoftwareList
+                if ($installedApps) {
+                    $installedApps | Select-Object DisplayName, DisplayVersion, Publisher | Format-Table -AutoSize
+                } else {
+                    Write-Host "No installed applications found." -ForegroundColor Red
+                }
+            }
+            "2" {
+                Write-Host "`nFetching installed software...`n" -ForegroundColor Yellow
+                $installedApps = Get-InstalledSoftwareList
+
+                if (-not $installedApps) {
+                    Write-Host "No installed applications found." -ForegroundColor Red
+                } else {
+                    # Render indexed list
+                    for ($i = 0; $i -lt $installedApps.Count; $i++) {
+                        $app = $installedApps[$i]
+                        Write-Host " [$($i + 1)] $($app.DisplayName)" -NoNewline
+                        if ($app.DisplayVersion) { Write-Host " (v$($app.DisplayVersion))" -ForegroundColor Gray } else { Write-Host "" }
+                    }
+
+                    Write-Host "`n------------------------------------------"
+                    $selection = Read-Host "Enter the NUMBER of the application to uninstall (or press ENTER to cancel)"
+                    
+                    if ($selection -match "^\d+$") {
+                        $index = [int]$selection - 1
+                        if ($index -ge 0 -and $index -lt $installedApps.Count) {
+                            $targetApp = $installedApps[$index]
+                            Write-Host "`nSelected: " -NoNewline
+                            Write-Host "$($targetApp.DisplayName)" -ForegroundColor Cyan
+                            
+                            $confirm = Read-Host "Are you sure you want to trigger uninstallation for this software? (Y/N)"
+                            if ($confirm -eq 'Y' -or $confirm -eq 'y') {
+                                try {
+                                    Write-Host "`nAttempting uninstallation..." -ForegroundColor Yellow
+                                    
+                                    # Determine best uninstall command string
+                                    $cmd = if ($targetApp.QuietUninstallString) { $targetApp.QuietUninstallString } else { $targetApp.UninstallString }
+
+                                    if ([string]::IsNullOrWhiteSpace($cmd)) {
+                                        Write-Host "No valid uninstall string recorded for this application." -ForegroundColor Red
+                                    } elseif ($cmd -match "msiexec") {
+                                        # Handle MSI packages
+                                        $msiGuid = [regex]::Match($cmd, '{[A-F0-9-]+}').Value
+                                        if ($msiGuid) {
+                                            Start-Process "msiexec.exe" -ArgumentList "/x $msiGuid /qn" -Wait -NoNewWindow
+                                        } else {
+                                            cmd.exe /c $cmd
+                                        }
+                                        Write-Host "Uninstallation command executed." -ForegroundColor Green
+                                    } else {
+                                        # Execute generic uninstaller string
+                                        cmd.exe /c $cmd
+                                        Write-Host "Uninstallation process launched." -ForegroundColor Green
+                                    }
+                                } catch {
+                                    Write-Host "Failed to launch uninstaller: $_" -ForegroundColor Red
+                                }
+                            } else {
+                                Write-Host "Uninstallation cancelled." -ForegroundColor Yellow
+                            }
+                        } else {
+                            Write-Host "Invalid selection number." -ForegroundColor Red
+                        }
+                    } else {
+                        Write-Host "Cancelled / Invalid selection." -ForegroundColor Yellow
+                    }
+                }
+            }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+                continue
+            }
+        }
+        Pause-Menu "Software Menu"
+    }
+}
+
+# ==========================================
+# SUB-MENU: PC MANAGEMENT
+# ==========================================
+function Show-PCManagementMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "          PC MANAGEMENT TOOLS             " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. PC Services"
+        Write-Host " 2. Software"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Main Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" { Show-ServicesMenu }
+            "2" { Show-SoftwareMenu }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+            }
+        }
+    }
+}
+
+# ==========================================
 # MAIN DASHBOARD LOOP
 # ==========================================
 while ($true) {
@@ -348,7 +493,7 @@ while ($true) {
     Write-Host " 1. Printer Management"
     Write-Host " 2. Network & Domain Tools"
     Write-Host " 3. User & Account Management"
-    Write-Host " 4. PC Services"
+    Write-Host " 4. PC Management"
     Write-Host "------------------------------------------"
     Write-Host " Q. Quit"
     Write-Host "==========================================" -ForegroundColor Green
@@ -359,7 +504,7 @@ while ($true) {
         "1" { Show-PrinterMenu }
         "2" { Show-NetworkMenu }
         "3" { Show-UserMenu }
-        "4" { Show-ServicesMenu }
+        "4" { Show-PCManagementMenu }
         "q" { 
             Clear-Host
             Write-Host "Exiting Dashboard. Have a great day!" -ForegroundColor Green
