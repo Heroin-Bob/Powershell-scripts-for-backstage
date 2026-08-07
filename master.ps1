@@ -2,7 +2,7 @@
 .SYNOPSIS
     DOS-Style Utility Dashboard
 .DESCRIPTION
-    Consolidates Admin, Network, Printer, PC Management (Services & Software), and User Management tasks into an interactive CLI GUI.
+    Consolidates Admin, Network, Printer, PC Management (Services & Software), Tools, and User Management tasks into an interactive CLI GUI.
 #>
 
 # ==========================================
@@ -387,7 +387,6 @@ function Show-SoftwareMenu {
                 if (-not $installedApps) {
                     Write-Host "No installed applications found." -ForegroundColor Red
                 } else {
-                    # Render indexed list
                     for ($i = 0; $i -lt $installedApps.Count; $i++) {
                         $app = $installedApps[$i]
                         Write-Host " [$($i + 1)] $($app.DisplayName)" -NoNewline
@@ -409,13 +408,11 @@ function Show-SoftwareMenu {
                                 try {
                                     Write-Host "`nAttempting uninstallation..." -ForegroundColor Yellow
                                     
-                                    # Determine best uninstall command string
                                     $cmd = if ($targetApp.QuietUninstallString) { $targetApp.QuietUninstallString } else { $targetApp.UninstallString }
 
                                     if ([string]::IsNullOrWhiteSpace($cmd)) {
                                         Write-Host "No valid uninstall string recorded for this application." -ForegroundColor Red
                                     } elseif ($cmd -match "msiexec") {
-                                        # Handle MSI packages
                                         $msiGuid = [regex]::Match($cmd, '{[A-F0-9-]+}').Value
                                         if ($msiGuid) {
                                             Start-Process "msiexec.exe" -ArgumentList "/x $msiGuid /qn" -Wait -NoNewWindow
@@ -424,7 +421,6 @@ function Show-SoftwareMenu {
                                         }
                                         Write-Host "Uninstallation command executed." -ForegroundColor Green
                                     } else {
-                                        # Execute generic uninstaller string
                                         cmd.exe /c $cmd
                                         Write-Host "Uninstallation process launched." -ForegroundColor Green
                                     }
@@ -483,6 +479,88 @@ function Show-PCManagementMenu {
 }
 
 # ==========================================
+# SUB-MENU: SEAMONKEY PORTABLE
+# ==========================================
+function Show-SeaMonkeyMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "            SEAMONKEY PORTABLE            " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. Open from temp"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Tools Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" {
+                $zipUrl = "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/SeaMonkey64.zip"
+                $tempZipPath = Join-Path $env:TEMP "SeaMonkey64.zip"
+                $extractDir = Join-Path $env:TEMP "SeaMonkey64"
+
+                try {
+                    Write-Host "`nDownloading SeaMonkey Portable mirror to Temp..." -ForegroundColor Yellow
+                    Invoke-WebRequest -Uri $zipUrl -OutFile $tempZipPath -ErrorAction Stop
+                    
+                    Write-Host "Extracting archive..." -ForegroundColor Yellow
+                    if (Test-Path $extractDir) {
+                        Remove-Item $extractDir -Recurse -Force
+                    }
+                    Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
+
+                    $exeFile = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse | Select-Object -First 1
+
+                    if ($exeFile) {
+                        Write-Host "Launching SeaMonkey Portable..." -ForegroundColor Green
+                        Start-Process -FilePath $exeFile.FullName
+                    } else {
+                        Write-Host "Could not locate seamonkey.exe in extracted folder." -ForegroundColor Red
+                    }
+                } catch {
+                    Write-Host "Failed to download or extract SeaMonkey Portable: $_" -ForegroundColor Red
+                }
+            }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+                continue
+            }
+        }
+        Pause-Menu "SeaMonkey Menu"
+    }
+}
+
+# ==========================================
+# SUB-MENU: TOOLS
+# ==========================================
+function Show-ToolsMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "               TOOLS                      " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " 1. SeaMonkey Portable"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Main Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+        $Choice = Read-Host "`nSelect an option"
+
+        switch ($Choice.ToLower()) {
+            "1" { Show-SeaMonkeyMenu }
+            "b" { return }
+            Default {
+                Write-Host "Invalid selection, try again." -ForegroundColor Red
+                Start-Sleep -Seconds 1
+            }
+        }
+    }
+}
+
+# ==========================================
 # MAIN DASHBOARD LOOP
 # ==========================================
 while ($true) {
@@ -494,6 +572,7 @@ while ($true) {
     Write-Host " 2. Network & Domain Tools"
     Write-Host " 3. User & Account Management"
     Write-Host " 4. PC Management"
+    Write-Host " 5. Tools"
     Write-Host "------------------------------------------"
     Write-Host " Q. Quit"
     Write-Host "==========================================" -ForegroundColor Green
@@ -505,6 +584,7 @@ while ($true) {
         "2" { Show-NetworkMenu }
         "3" { Show-UserMenu }
         "4" { Show-PCManagementMenu }
+        "5" { Show-ToolsMenu }
         "q" { 
             Clear-Host
             Write-Host "Exiting Dashboard. Have a great day!" -ForegroundColor Green
