@@ -529,7 +529,7 @@ function Show-BleachBitMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "         BLEACHBIT (18.2 MB)              " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Cache, temp file, and history cleaner." -ForegroundColor Gray
+        Write-Host " Cache, temp file, and history cleaner." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -554,7 +554,7 @@ function Show-CPUZMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "           CPU-Z (2.77 MB)                " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Details CPU, motherboard, memory, and OS." -ForegroundColor Gray
+        Write-Host " Details CPU, motherboard, memory, and OS." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -579,7 +579,7 @@ function Show-ExplorerPlusPlusMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "         EXPLORER++ (4.16 MB)             " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Multi-tabbed file manager for Windows." -ForegroundColor Gray
+        Write-Host " Multi-tabbed file manager for Windows." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -604,7 +604,7 @@ function Show-GeekUninstallerMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "       GEEK UNINSTALLER (3.16 MB)         " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Lightweight uninstaller with deep scanning." -ForegroundColor Gray
+        Write-Host " Lightweight uninstaller with deep scanning." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -629,7 +629,7 @@ function Show-HWMonitorMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "          HWMONITOR (2.69 MB)             " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Voltage, temperature, and fan speed monitor." -ForegroundColor Gray
+        Write-Host " Voltage, temperature, and fan speed monitor." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -654,7 +654,7 @@ function Show-IObitUninstallerMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "   IOBIT UNINSTALLER PORTABLE (15.9 MB)   " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Removes stubborn programs and leftovers." -ForegroundColor Gray
+        Write-Host " Removes stubborn programs and leftovers." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -679,7 +679,7 @@ function Show-KuduMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "         KUDU PORTABLE (152 MB)           " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " PC cleaning, debloating, and performance suite." -ForegroundColor Gray
+        Write-Host " PC cleaning, debloating, and performance suite." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -704,7 +704,7 @@ function Show-SeaMonkeyMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "         SEAMONKEY (62.9 MB)              " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " Web browser, email client, and editor suite." -ForegroundColor Gray
+        Write-Host " Web browser, email client, and editor suite." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
         Write-Host "------------------------------------------"
@@ -732,22 +732,47 @@ function Show-ToolsMenu {
         Write-Host "==========================================" -ForegroundColor Cyan
         Write-Host "                  TOOLS                   " -ForegroundColor White
         Write-Host "==========================================" -ForegroundColor Cyan
-        Write-Host " 1. BleachBit (18.2 MB)"
-        Write-Host "    System cleaner for cache, temp files, and privacy."
-        Write-Host " 2. CPU-Z (2.77 MB)"
-        Write-Host "    Details CPU, motherboard, memory, and OS."
-        Write-Host " 3. Explorer++ (4.16 MB)"
-        Write-Host "    Lightweight tabbed file manager for Windows."
-        Write-Host " 4. Geek Uninstaller (3.16 MB)"
-        Write-Host "    Uninstalls apps and performs deep leftover scans."
-        Write-Host " 5. HWMonitor (2.69 MB)"
-        Write-Host "    Reads hardware sensors for voltage, temp, and fans."
-        Write-Host " 6. IObit Uninstaller Portable (15.9 MB)"
-        Write-Host "    Removes unwanted software and browser extensions."
-        Write-Host " 7. Kudu Portable (152 MB)"
-        Write-Host "    System maintenance, debloating, and performance suite."
-        Write-Host " 8. SeaMonkey (62.9 MB)"
-        Write-Host "    All-in-one web browser, email, and editing suite."
+        
+        Write-Host " 1. BleachBit (" -NoNewline
+        Write-Host "18.2 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    System cleaner for cache, temp files, and privacy." -ForegroundColor Yellow
+
+        Write-Host " 2. CPU-Z (" -NoNewline
+        Write-Host "2.77 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Details CPU, motherboard, memory, and OS." -ForegroundColor Yellow
+
+        Write-Host " 3. Explorer++ (" -NoNewline
+        Write-Host "4.16 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Lightweight tabbed file manager for Windows." -ForegroundColor Yellow
+
+        Write-Host " 4. Geek Uninstaller (" -NoNewline
+        Write-Host "3.16 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Uninstalls apps and performs deep leftover scans." -ForegroundColor Yellow
+
+        Write-Host " 5. HWMonitor (" -NoNewline
+        Write-Host "2.69 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Reads hardware sensors for voltage, temp, and fans." -ForegroundColor Yellow
+
+        Write-Host " 6. IObit Uninstaller Portable (" -NoNewline
+        Write-Host "15.9 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Removes unwanted software and browser extensions." -ForegroundColor Yellow
+
+        Write-Host " 7. Kudu Portable (" -NoNewline
+        Write-Host "152 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    System maintenance, debloating, and performance suite." -ForegroundColor Yellow
+
+        Write-Host " 8. SeaMonkey (" -NoNewline
+        Write-Host "62.9 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    All-in-one web browser, email, and editing suite." -ForegroundColor Yellow
+
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
