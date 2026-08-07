@@ -501,25 +501,33 @@ function Show-SeaMonkeyMenu {
                 $extractDir = Join-Path $env:TEMP "SeaMonkey64"
 
                 try {
-                    Write-Host "`nDownloading SeaMonkey Portable mirror to Temp..." -ForegroundColor Yellow
-                    Invoke-WebRequest -Uri $zipUrl -OutFile $tempZipPath -ErrorAction Stop
-                    
-                    Write-Host "Extracting archive..." -ForegroundColor Yellow
-                    if (Test-Path $extractDir) {
-                        Remove-Item $extractDir -Recurse -Force
-                    }
-                    Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
+                    # Check if SeaMonkey already exists in the Temp directory
+                    $existingExe = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
 
-                    $exeFile = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse | Select-Object -First 1
-
-                    if ($exeFile) {
-                        Write-Host "Launching SeaMonkey Portable..." -ForegroundColor Green
-                        Start-Process -FilePath $exeFile.FullName
+                    if ($existingExe) {
+                        Write-Host "`nSeaMonkey Portable already exists in Temp. Launching..." -ForegroundColor Green
+                        Start-Process -FilePath $existingExe.FullName
                     } else {
-                        Write-Host "Could not locate seamonkey.exe in extracted folder." -ForegroundColor Red
+                        Write-Host "`nSeaMonkey Portable not found in Temp. Downloading mirror..." -ForegroundColor Yellow
+                        Invoke-WebRequest -Uri $zipUrl -OutFile $tempZipPath -ErrorAction Stop
+                        
+                        Write-Host "Extracting archive..." -ForegroundColor Yellow
+                        if (Test-Path $extractDir) {
+                            Remove-Item $extractDir -Recurse -Force
+                        }
+                        Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
+
+                        $exeFile = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+                        if ($exeFile) {
+                            Write-Host "Launching SeaMonkey Portable..." -ForegroundColor Green
+                            Start-Process -FilePath $exeFile.FullName
+                        } else {
+                            Write-Host "Could not locate seamonkey.exe in extracted folder." -ForegroundColor Red
+                        }
                     }
                 } catch {
-                    Write-Host "Failed to download or extract SeaMonkey Portable: $_" -ForegroundColor Red
+                    Write-Host "Failed to process or launch SeaMonkey Portable: $_" -ForegroundColor Red
                 }
             }
             "b" { return }
