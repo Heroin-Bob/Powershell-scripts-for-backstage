@@ -499,16 +499,15 @@ function Show-SeaMonkeyMenu {
                 $zipUrl = "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/SeaMonkey64.zip"
                 $tempZipPath = Join-Path $env:TEMP "SeaMonkey64.zip"
                 $extractDir = Join-Path $env:TEMP "SeaMonkey64"
+                $targetExe = Join-Path $env:TEMP "SeaMonkey64\SeaMonkey64\seamonkey.exe"
 
                 try {
-                    # Check if SeaMonkey already exists in the Temp directory
-                    $existingExe = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-
-                    if ($existingExe) {
-                        Write-Host "`nSeaMonkey Portable already exists in Temp. Launching..." -ForegroundColor Green
-                        Start-Process -FilePath $existingExe.FullName
+                    # Check for the exact path: %TEMP%\SeaMonkey64\SeaMonkey64\seamonkey.exe
+                    if (Test-Path $targetExe) {
+                        Write-Host "`nSeaMonkey Portable found in Temp. Launching..." -ForegroundColor Green
+                        Start-Process -FilePath $targetExe
                     } else {
-                        Write-Host "`nSeaMonkey Portable not found in Temp. Downloading mirror..." -ForegroundColor Yellow
+                        Write-Host "`nSeaMonkey Portable not found at $targetExe. Downloading mirror..." -ForegroundColor Yellow
                         Invoke-WebRequest -Uri $zipUrl -OutFile $tempZipPath -ErrorAction Stop
                         
                         Write-Host "Extracting archive..." -ForegroundColor Yellow
@@ -517,13 +516,18 @@ function Show-SeaMonkeyMenu {
                         }
                         Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
 
-                        $exeFile = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-
-                        if ($exeFile) {
+                        if (Test-Path $targetExe) {
                             Write-Host "Launching SeaMonkey Portable..." -ForegroundColor Green
-                            Start-Process -FilePath $exeFile.FullName
+                            Start-Process -FilePath $targetExe
                         } else {
-                            Write-Host "Could not locate seamonkey.exe in extracted folder." -ForegroundColor Red
+                            # Fallback search if zip structure differs slightly
+                            $fallbackExe = Get-ChildItem -Path $extractDir -Filter "seamonkey.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+                            if ($fallbackExe) {
+                                Write-Host "Launching SeaMonkey Portable..." -ForegroundColor Green
+                                Start-Process -FilePath $fallbackExe.FullName
+                            } else {
+                                Write-Host "Could not locate seamonkey.exe in extracted folder." -ForegroundColor Red
+                            }
                         }
                     }
                 } catch {
