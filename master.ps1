@@ -5,6 +5,7 @@
     Consolidates Admin, Network, Printer, PC Management (Services & Software), Tools, and User Management tasks into an interactive CLI GUI.
 #>
 
+
 # ==========================================
 # ELEVATION CHECK
 # ==========================================
@@ -15,6 +16,7 @@ if (-not $isAdmin) {
     Start-Sleep -Seconds 2
 }
 
+
 # ==========================================
 # HELPER FUNCTIONS
 # ==========================================
@@ -23,6 +25,7 @@ function Pause-Menu {
     Write-Host "`n------------------------------------------" -ForegroundColor Gray
     Read-Host "Action complete. Press ENTER to return to $MenuName"
 }
+
 
 function Get-InstalledSoftwareList {
     # Queries 64-bit and 32-bit registry keys for installed apps
@@ -37,8 +40,10 @@ function Get-InstalledSoftwareList {
         Select-Object DisplayName, DisplayVersion, Publisher, UninstallString, QuietUninstallString |
         Sort-Object DisplayName -Unique
 
+
     return $apps
 }
+
 
 function Invoke-PortableTool {
     param (
@@ -48,12 +53,15 @@ function Invoke-PortableTool {
         [string]$ExePattern
     )
 
+
     $tempZipPath = Join-Path $env:TEMP $ZipName
     $extractDir  = Join-Path $env:TEMP ([System.IO.Path]::GetFileNameWithoutExtension($ZipName))
+
 
     try {
         # Check if already extracted in temp directory
         $existingExe = Get-ChildItem -Path $extractDir -Filter $ExePattern -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
 
         if ($existingExe -and (Test-Path $existingExe.FullName)) {
             Write-Host "`n$ToolName found in Temp ($($existingExe.FullName)). Launching..." -ForegroundColor Green
@@ -68,7 +76,9 @@ function Invoke-PortableTool {
             }
             Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
 
+
             $targetExe = Get-ChildItem -Path $extractDir -Filter $ExePattern -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
 
             if ($targetExe) {
                 Write-Host "Launching $ToolName..." -ForegroundColor Green
@@ -81,6 +91,73 @@ function Invoke-PortableTool {
         Write-Host "Failed to process or launch ${ToolName}: $_" -ForegroundColor Red
     }
 }
+
+
+function Invoke-KeyboardTester {
+    $tempZipPath = Join-Path $env:TEMP "KeyboardTester.zip"
+    $extractDir  = Join-Path $env:TEMP "KeyboardTester"
+
+    try {
+        # Check if already extracted in temp directory
+        $existingHtml = Get-ChildItem -Path $extractDir -Filter *.html -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+
+        if ($existingHtml -and (Test-Path $existingHtml.FullName)) {
+            Write-Host "`nKeyboard Tester found in Temp ($($existingHtml.FullName)). Opening in browser..." -ForegroundColor Green
+            Start-Process -FilePath $existingHtml.FullName
+            Write-Host "If the browser does not open, copy this path to a browser window: $($existingHtml.FullName)" -ForegroundColor Yellow
+        } else {
+            Write-Host "`nKeyboard Tester not found in Temp. Downloading mirror..." -ForegroundColor Yellow
+            Invoke-WebRequest -Uri "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/KeyboardTester.zip" -OutFile $tempZipPath -ErrorAction Stop
+
+            Write-Host "Extracting archive..." -ForegroundColor Yellow
+            if (Test-Path $extractDir) {
+                Remove-Item $extractDir -Recurse -Force
+            }
+            Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
+
+
+            $targetHtml = Get-ChildItem -Path $extractDir -Filter *.html -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+
+            if ($targetHtml) {
+                Write-Host "Opening Keyboard Tester in browser..." -ForegroundColor Green
+                Start-Process -FilePath $targetHtml.FullName
+                Write-Host "Opening in browser..." -ForegroundColor Green
+                Write-Host "If the browser does not open, copy this path to a browser window: $($targetHtml.FullName)" -ForegroundColor Yellow
+            } else {
+                Write-Host "Could not locate an HTML file in the extracted folder." -ForegroundColor Red
+            }
+        }
+    } catch {
+        Write-Host "Failed to process or launch Keyboard Tester: $_" -ForegroundColor Red
+    }
+}
+
+
+function Remove-ZipFromTemp {
+    param([string]$ZipName)
+    $zipPath = Join-Path $env:TEMP $ZipName
+    if (Test-Path $zipPath) {
+        Remove-Item $zipPath -Force
+        Write-Host "Deleted $ZipName from Temp." -ForegroundColor Green
+    } else {
+        Write-Host "$ZipName not found in Temp." -ForegroundColor Yellow
+    }
+}
+
+
+function Remove-ToolFromTemp {
+    param([string]$ZipName)
+    $extractDir = Join-Path $env:TEMP ([System.IO.Path]::GetFileNameWithoutExtension($ZipName))
+    if (Test-Path $extractDir) {
+        Remove-Item $extractDir -Recurse -Force
+        Write-Host "Deleted $([System.IO.Path]::GetFileNameWithoutExtension($ZipName)) folder from Temp." -ForegroundColor Green
+    } else {
+        Write-Host "$([System.IO.Path]::GetFileNameWithoutExtension($ZipName)) folder not found in Temp." -ForegroundColor Yellow
+    }
+}
+
 
 # ==========================================
 # SUB-MENU: PRINTER MANAGEMENT
@@ -100,7 +177,9 @@ function Show-PrinterMenu {
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" {
@@ -136,6 +215,7 @@ function Show-PrinterMenu {
     }
 }
 
+
 # ==========================================
 # SUB-MENU: NETWORK & DOMAIN TOOLS
 # ==========================================
@@ -153,7 +233,9 @@ function Show-NetworkMenu {
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" {
@@ -163,6 +245,7 @@ function Show-NetworkMenu {
                         $mxRecords = Resolve-DnsName -Name $domain -Type MX -ErrorAction Stop
                         $exchangeString = ($mxRecords.NameExchange) -join " "
 
+
                         $filter = switch -Regex ($exchangeString) { 
                             "mail\.protection\.outlook\.com" { "Microsoft 365" } 
                             "netsol\.xion\.oxcs\.net"          { "Carrier Zone" } 
@@ -171,6 +254,7 @@ function Show-NetworkMenu {
                             "proofpoint\.com|ppe-hosted\.com" { "Proofpoint" } 
                             Default                            { "Unknown / Custom MX" } 
                         }
+
 
                         Write-Host "`nDetected MX Record(s):" -ForegroundColor Cyan
                         $mxRecords | Select-Object NameExchange, Preference | Format-Table -AutoSize
@@ -209,6 +293,7 @@ function Show-NetworkMenu {
     }
 }
 
+
 # ==========================================
 # SUB-MENU: USER & ACCOUNT MANAGEMENT
 # ==========================================
@@ -225,7 +310,9 @@ function Show-UserMenu {
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" {
@@ -240,6 +327,7 @@ function Show-UserMenu {
                     Write-Host " 3. Disable/Lock Account"
                     Write-Host " 4. Delete Account"
                     $userAction = Read-Host "Select action"
+
 
                     switch ($userAction) {
                         "1" {
@@ -274,6 +362,7 @@ function Show-UserMenu {
                 Write-Host " 2. Skip / Return"
                 $policyChoice = Read-Host "Select option"
 
+
                 if ($policyChoice -eq "1") {
                     $days = Read-Host "Enter max password age in days (or UNLIMITED)"
                     net accounts /maxpwage:$days
@@ -301,6 +390,7 @@ function Show-UserMenu {
     }
 }
 
+
 # ==========================================
 # SUB-MENU: PC SERVICES MANAGEMENT
 # ==========================================
@@ -321,7 +411,9 @@ function Show-ServicesMenu {
         Write-Host " B. Back to PC Management Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" {
@@ -368,6 +460,7 @@ function Show-ServicesMenu {
                     Write-Host " 3. Stop Service"
                     $svcAction = Read-Host "Select action"
 
+
                     try {
                         switch ($svcAction) {
                             "1" { Restart-Service -Name $targetSvc -Force -ErrorAction Stop; Write-Host "Restarted successfully." -ForegroundColor Green }
@@ -395,6 +488,7 @@ function Show-ServicesMenu {
     }
 }
 
+
 # ==========================================
 # SUB-MENU: SOFTWARE MANAGEMENT
 # ==========================================
@@ -410,7 +504,9 @@ function Show-SoftwareMenu {
         Write-Host " B. Back to PC Management Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" {
@@ -426,6 +522,7 @@ function Show-SoftwareMenu {
                 Write-Host "`nFetching installed software...`n" -ForegroundColor Yellow
                 $installedApps = Get-InstalledSoftwareList
 
+
                 if (-not $installedApps) {
                     Write-Host "No installed applications found." -ForegroundColor Red
                 } else {
@@ -434,6 +531,7 @@ function Show-SoftwareMenu {
                         Write-Host " [$($i + 1)] $($app.DisplayName)" -NoNewline
                         if ($app.DisplayVersion) { Write-Host " (v$($app.DisplayVersion))" -ForegroundColor Gray } else { Write-Host "" }
                     }
+
 
                     Write-Host "`n------------------------------------------"
                     $selection = Read-Host "Enter the NUMBER of the application to uninstall (or press ENTER to cancel)"
@@ -451,6 +549,7 @@ function Show-SoftwareMenu {
                                     Write-Host "`nAttempting uninstallation..." -ForegroundColor Yellow
                                     
                                     $cmd = if ($targetApp.QuietUninstallString) { $targetApp.QuietUninstallString } else { $targetApp.UninstallString }
+
 
                                     if ([string]::IsNullOrWhiteSpace($cmd)) {
                                         Write-Host "No valid uninstall string recorded for this application." -ForegroundColor Red
@@ -491,6 +590,7 @@ function Show-SoftwareMenu {
     }
 }
 
+
 # ==========================================
 # SUB-MENU: PC MANAGEMENT
 # ==========================================
@@ -506,7 +606,9 @@ function Show-PCManagementMenu {
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" { Show-ServicesMenu }
@@ -520,6 +622,7 @@ function Show-PCManagementMenu {
     }
 }
 
+
 # ==========================================
 # PORTABLE TOOL SUB-MENUS
 # ==========================================
@@ -532,21 +635,27 @@ function Show-BleachBitMenu {
         Write-Host " Cache, temp file, and history cleaner." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "BleachBit" -ZipName "BleachBit.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/BleachBit.zip" -ExePattern "bleachbit*.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "BleachBit.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "BleachBit.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "BleachBit Menu"
     }
 }
+
 
 function Show-CPUZMenu {
     while ($true) {
@@ -557,21 +666,27 @@ function Show-CPUZMenu {
         Write-Host " Details CPU, motherboard, memory, and OS." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "CPU-Z" -ZipName "cpuz_x.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/cpuz_x.zip" -ExePattern "cpuz*.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "cpuz_x.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "cpuz_x.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "CPU-Z Menu"
     }
 }
+
 
 function Show-ExplorerPlusPlusMenu {
     while ($true) {
@@ -582,21 +697,27 @@ function Show-ExplorerPlusPlusMenu {
         Write-Host " Multi-tabbed file manager for Windows." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "Explorer++" -ZipName "Explorer++.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/Explorer++.zip" -ExePattern "Explorer++.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "Explorer++.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "Explorer++.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "Explorer++ Menu"
     }
 }
+
 
 function Show-GeekUninstallerMenu {
     while ($true) {
@@ -607,21 +728,27 @@ function Show-GeekUninstallerMenu {
         Write-Host " Lightweight uninstaller with deep scanning." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "Geek Uninstaller" -ZipName "GeekUninstaller.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/GeekUninstaller.zip" -ExePattern "geek.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "GeekUninstaller.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "GeekUninstaller.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "Geek Uninstaller Menu"
     }
 }
+
 
 function Show-HWMonitorMenu {
     while ($true) {
@@ -632,21 +759,27 @@ function Show-HWMonitorMenu {
         Write-Host " Voltage, temperature, and fan speed monitor." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "HWMonitor" -ZipName "HWMonitor.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/HWMonitor.zip" -ExePattern "HWMonitor*.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "HWMonitor.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "HWMonitor.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "HWMonitor Menu"
     }
 }
+
 
 function Show-IObitUninstallerMenu {
     while ($true) {
@@ -657,21 +790,27 @@ function Show-IObitUninstallerMenu {
         Write-Host " Removes stubborn programs and leftovers." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "IObit Uninstaller Portable" -ZipName "IObitUninstallerPortable.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/IObitUninstallerPortable.zip" -ExePattern "*Uninstaller*.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "IObitUninstallerPortable.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "IObitUninstallerPortable.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "IObit Uninstaller Menu"
     }
 }
+
 
 function Show-KuduMenu {
     while ($true) {
@@ -682,21 +821,27 @@ function Show-KuduMenu {
         Write-Host " PC cleaning, debloating, and performance suite." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "Kudu Portable" -ZipName "KuduPortable.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/KuduPortable.zip" -ExePattern "*Kudu*.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "KuduPortable.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "KuduPortable.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "Kudu Menu"
     }
 }
+
 
 function Show-SeaMonkeyMenu {
     while ($true) {
@@ -707,21 +852,56 @@ function Show-SeaMonkeyMenu {
         Write-Host " Web browser, email client, and editor suite." -ForegroundColor Yellow
         Write-Host "------------------------------------------"
         Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Tools Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
+
 
         $Choice = Read-Host "`nSelect an option"
         switch ($Choice.ToLower()) {
             "1" {
                 Invoke-PortableTool -ToolName "SeaMonkey" -ZipName "SeaMonkey64.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/SeaMonkey64.zip" -ExePattern "seamonkey.exe"
             }
+            "2" { Remove-ZipFromTemp -ZipName "SeaMonkey64.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "SeaMonkey64.zip" }
             "b" { return }
             Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
         }
         Pause-Menu "SeaMonkey Menu"
     }
 }
+
+
+function Show-KeyboardTesterMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " LOCAL KEYBOARD/MOUSE TEST (6.58 KB)      " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " Local HTML based tester for verifying keyboard and mouse functionality." -ForegroundColor Yellow
+        Write-Host "------------------------------------------"
+        Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Tools Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+
+        $Choice = Read-Host "`nSelect an option"
+        switch ($Choice.ToLower()) {
+            "1" { Invoke-KeyboardTester }
+            "2" { Remove-ZipFromTemp -ZipName "KeyboardTester.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "KeyboardTester.zip" }
+            "b" { return }
+            Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
+        }
+        Pause-Menu "Keyboard/Mouse Test Menu"
+    }
+}
+
 
 # ==========================================
 # SUB-MENU: TOOLS
@@ -738,46 +918,62 @@ function Show-ToolsMenu {
         Write-Host ")"
         Write-Host "    System cleaner for cache, temp files, and privacy." -ForegroundColor Yellow
 
+
         Write-Host " 2. CPU-Z (" -NoNewline
         Write-Host "2.77 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    Details CPU, motherboard, memory, and OS." -ForegroundColor Yellow
+
 
         Write-Host " 3. Explorer++ (" -NoNewline
         Write-Host "4.16 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    Lightweight tabbed file manager for Windows." -ForegroundColor Yellow
 
+
         Write-Host " 4. Geek Uninstaller (" -NoNewline
         Write-Host "3.16 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    Uninstalls apps and performs deep leftover scans." -ForegroundColor Yellow
+
 
         Write-Host " 5. HWMonitor (" -NoNewline
         Write-Host "2.69 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    Reads hardware sensors for voltage, temp, and fans." -ForegroundColor Yellow
 
+
         Write-Host " 6. IObit Uninstaller Portable (" -NoNewline
         Write-Host "15.9 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    Removes unwanted software and browser extensions." -ForegroundColor Yellow
+
 
         Write-Host " 7. Kudu Portable (" -NoNewline
         Write-Host "152 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    System maintenance, debloating, and performance suite." -ForegroundColor Yellow
 
+
         Write-Host " 8. SeaMonkey (" -NoNewline
         Write-Host "62.9 MB" -ForegroundColor Green -NoNewline
         Write-Host ")"
         Write-Host "    All-in-one web browser, email, and editing suite." -ForegroundColor Yellow
 
+
+        Write-Host " 9. Local Keyboard/Mouse Test (" -NoNewline
+        Write-Host "6.58 KB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Local HTML tester for verifying keyboard and mouse functionality." -ForegroundColor Yellow
+
+
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
 
+
         $Choice = Read-Host "`nSelect an option"
+
 
         switch ($Choice.ToLower()) {
             "1" { Show-BleachBitMenu }
@@ -788,6 +984,7 @@ function Show-ToolsMenu {
             "6" { Show-IObitUninstallerMenu }
             "7" { Show-KuduMenu }
             "8" { Show-SeaMonkeyMenu }
+            "9" { Show-KeyboardTesterMenu }
             "b" { return }
             Default {
                 Write-Host "Invalid selection, try again." -ForegroundColor Red
@@ -796,6 +993,7 @@ function Show-ToolsMenu {
         }
     }
 }
+
 
 # ==========================================
 # MAIN DASHBOARD LOOP
@@ -814,7 +1012,9 @@ while ($true) {
     Write-Host " Q. Quit"
     Write-Host "==========================================" -ForegroundColor Green
 
+
     $MainMenuChoice = Read-Host "`nSelect a Category"
+
 
     switch ($MainMenuChoice.ToLower()) {
         "1" { Show-PrinterMenu }
