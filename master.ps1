@@ -135,6 +135,45 @@ function Invoke-KeyboardTester {
 }
 
 
+function Invoke-SpeedtestCLI {
+    $tempZipPath = Join-Path $env:TEMP "speedtestCLI.zip"
+    $extractDir  = Join-Path $env:TEMP "speedtestCLI"
+
+    try {
+        # Check if already extracted in temp directory
+        $existingExe = Get-ChildItem -Path $extractDir -Filter "speedtest.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+
+        if ($existingExe -and (Test-Path $existingExe.FullName)) {
+            Write-Host "`nSpeedtest CLI found in Temp ($($existingExe.FullName)). Running..." -ForegroundColor Green
+            & $existingExe.FullName
+        } else {
+            Write-Host "`nSpeedtest CLI not found in Temp. Downloading mirror..." -ForegroundColor Yellow
+            Invoke-WebRequest -Uri "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/speedtestCLI.zip" -OutFile $tempZipPath -ErrorAction Stop
+
+            Write-Host "Extracting archive..." -ForegroundColor Yellow
+            if (Test-Path $extractDir) {
+                Remove-Item $extractDir -Recurse -Force
+            }
+            Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
+
+
+            $targetExe = Get-ChildItem -Path $extractDir -Filter "speedtest.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+
+            if ($targetExe) {
+                Write-Host "Running Speedtest CLI..." -ForegroundColor Green
+                & $targetExe.FullName
+            } else {
+                Write-Host "Could not locate 'speedtest.exe' in extracted folder." -ForegroundColor Red
+            }
+        }
+    } catch {
+        Write-Host "Failed to process or run Speedtest CLI: $_" -ForegroundColor Red
+    }
+}
+
+
 function Remove-ZipFromTemp {
     param([string]$ZipName)
     $zipPath = Join-Path $env:TEMP $ZipName
@@ -903,6 +942,35 @@ function Show-KeyboardTesterMenu {
 }
 
 
+function Show-SpeedtestCLIMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "         SPEEDTEST CLI (945 KB)           " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " Network speed test using speedtest.net." -ForegroundColor Yellow
+        Write-Host "------------------------------------------"
+        Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Tools Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+
+        $Choice = Read-Host "`nSelect an option"
+        switch ($Choice.ToLower()) {
+            "1" { Invoke-SpeedtestCLI }
+            "2" { Remove-ZipFromTemp -ZipName "speedtestCLI.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "speedtestCLI.zip" }
+            "b" { return }
+            Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
+        }
+        Pause-Menu "Speedtest CLI Menu"
+    }
+}
+
+
 # ==========================================
 # SUB-MENU: TOOLS
 # ==========================================
@@ -967,6 +1035,12 @@ function Show-ToolsMenu {
         Write-Host "    Local HTML tester for verifying keyboard and mouse functionality." -ForegroundColor Yellow
 
 
+        Write-Host " 10. Speedtest CLI (" -NoNewline
+        Write-Host "945 KB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Network speed test using speedtest.net." -ForegroundColor Yellow
+
+
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
@@ -985,6 +1059,7 @@ function Show-ToolsMenu {
             "7" { Show-KuduMenu }
             "8" { Show-SeaMonkeyMenu }
             "9" { Show-KeyboardTesterMenu }
+            "10" { Show-SpeedtestCLIMenu }
             "b" { return }
             Default {
                 Write-Host "Invalid selection, try again." -ForegroundColor Red
