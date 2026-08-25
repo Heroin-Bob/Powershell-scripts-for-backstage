@@ -971,6 +971,37 @@ function Show-SpeedtestCLIMenu {
 }
 
 
+function Show-TreeSizeFreeMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "        TREESIZE FREE (18.8 MB)           " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " Analyzes disk usage and finds large files and folders." -ForegroundColor Yellow
+        Write-Host "------------------------------------------"
+        Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Tools Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+
+        $Choice = Read-Host "`nSelect an option"
+        switch ($Choice.ToLower()) {
+            "1" {
+                Invoke-PortableTool -ToolName "TreeSize Free" -ZipName "TreeSizeFree.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/TreeSizeFree.zip" -ExePattern "*TreeSizeFree*.exe"
+            }
+            "2" { Remove-ZipFromTemp -ZipName "TreeSizeFree.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "TreeSizeFree.zip" }
+            "b" { return }
+            Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
+        }
+        Pause-Menu "TreeSize Free Menu"
+    }
+}
+
+
 # ==========================================
 # SUB-MENU: TOOLS
 # ==========================================
@@ -1041,6 +1072,12 @@ function Show-ToolsMenu {
         Write-Host "    Network speed test using speedtest.net." -ForegroundColor Yellow
 
 
+        Write-Host " 11. TreeSize Free (" -NoNewline
+        Write-Host "18.8 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Analyzes disk usage and finds large files and folders." -ForegroundColor Yellow
+
+
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
@@ -1060,6 +1097,7 @@ function Show-ToolsMenu {
             "8" { Show-SeaMonkeyMenu }
             "9" { Show-KeyboardTesterMenu }
             "10" { Show-SpeedtestCLIMenu }
+            "11" { Show-TreeSizeFreeMenu }
             "b" { return }
             Default {
                 Write-Host "Invalid selection, try again." -ForegroundColor Red
