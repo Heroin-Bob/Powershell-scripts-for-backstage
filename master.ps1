@@ -168,8 +168,61 @@ function Invoke-SpeedtestCLI {
                 Write-Host "Could not locate 'speedtest.exe' in extracted folder." -ForegroundColor Red
             }
         }
+} catch {
+        Write-Host "Failed to process or launch Keyboard Tester: $_" -ForegroundColor Red
+    }
+}
+
+
+function Invoke-InstallerCleanCLI {
+    $tempZipPath = Join-Path $env:TEMP "InstallerClean_CLI.zip"
+    $extractDir  = Join-Path $env:TEMP "InstallerClean_CLI"
+    $cliPath = $null
+
+    try {
+        # Check if already extracted in temp directory
+        $existingExe = Get-ChildItem -Path $extractDir -Filter "installerclean-cli.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+
+        if ($existingExe -and (Test-Path $existingExe.FullName)) {
+            $cliPath = $existingExe.FullName
+            Write-Host "`nInstallerClean CLI found in Temp ($cliPath)." -ForegroundColor Green
+        } else {
+            Write-Host "`nInstallerClean CLI not found in Temp. Downloading mirror..." -ForegroundColor Yellow
+            Invoke-WebRequest -Uri "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/InstallerClean_CLI.zip" -OutFile $tempZipPath -ErrorAction Stop
+
+            Write-Host "Extracting archive..." -ForegroundColor Yellow
+            if (Test-Path $extractDir) {
+                Remove-Item $extractDir -Recurse -Force
+            }
+            Expand-Archive -Path $tempZipPath -DestinationPath $extractDir -Force
+
+
+            $targetExe = Get-ChildItem -Path $extractDir -Filter "installerclean-cli.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+
+
+            if ($targetExe) {
+                $cliPath = $targetExe.FullName
+            } else {
+                Write-Host "Could not locate 'installerclean-cli.exe' in extracted folder." -ForegroundColor Red
+            }
+        }
+
+
+        if ($cliPath) {
+            Write-Host "`nScanning for unneeded Windows Installer files..." -ForegroundColor Cyan
+            & $cliPath /s
+
+            $cleanup = Read-Host "`nDo you want to delete the unnecessary files found? (Y/N)"
+            if ($cleanup -eq 'Y' -or $cleanup -eq 'y') {
+                Write-Host "Deleting unnecessary files..." -ForegroundColor Yellow
+                & $cliPath /d
+            } else {
+                Write-Host "No files were deleted." -ForegroundColor Yellow
+            }
+        }
     } catch {
-        Write-Host "Failed to process or run Speedtest CLI: $_" -ForegroundColor Red
+        Write-Host "Failed to process or run InstallerClean CLI: $_" -ForegroundColor Red
     }
 }
 
@@ -1033,6 +1086,35 @@ function Show-InstallerCleanMenu {
 }
 
 
+function Show-InstallerCleanCLIMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "    INSTALLERCLEAN CLI (31.4 MB)          " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " Command-line tool to scan and clean orphaned Windows Installer files." -ForegroundColor Yellow
+        Write-Host "------------------------------------------"
+        Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Tools Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+
+        $Choice = Read-Host "`nSelect an option"
+        switch ($Choice.ToLower()) {
+            "1" { Invoke-InstallerCleanCLI }
+            "2" { Remove-ZipFromTemp -ZipName "InstallerClean_CLI.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "InstallerClean_CLI.zip" }
+            "b" { return }
+            Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
+        }
+        Pause-Menu "InstallerClean CLI Menu"
+    }
+}
+
+
 # ==========================================
 # SUB-MENU: TOOLS
 # ==========================================
@@ -1115,6 +1197,12 @@ function Show-ToolsMenu {
         Write-Host "    Safely cleans orphaned Windows Installer files and reclaims disk space." -ForegroundColor Yellow
 
 
+        Write-Host " 13. InstallerClean CLI (" -NoNewline
+        Write-Host "31.4 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Command-line tool to scan and clean orphaned Windows Installer files." -ForegroundColor Yellow
+
+
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
@@ -1136,6 +1224,7 @@ function Show-ToolsMenu {
             "10" { Show-SpeedtestCLIMenu }
             "11" { Show-TreeSizeFreeMenu }
             "12" { Show-InstallerCleanMenu }
+            "13" { Show-InstallerCleanCLIMenu }
             "b" { return }
             Default {
                 Write-Host "Invalid selection, try again." -ForegroundColor Red
