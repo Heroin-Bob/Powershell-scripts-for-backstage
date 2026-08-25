@@ -1002,6 +1002,37 @@ function Show-TreeSizeFreeMenu {
 }
 
 
+function Show-InstallerCleanMenu {
+    while ($true) {
+        Clear-Host
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host "       INSTALLERCLEAN (57.8 MB)          " -ForegroundColor White
+        Write-Host "==========================================" -ForegroundColor Cyan
+        Write-Host " Safely cleans orphaned Windows Installer files to reclaim disk space." -ForegroundColor Yellow
+        Write-Host "------------------------------------------"
+        Write-Host " 1. Open from temp"
+        Write-Host " 2. Delete zip from temp"
+        Write-Host " 3. Delete tool from temp"
+        Write-Host "------------------------------------------"
+        Write-Host " B. Back to Tools Menu"
+        Write-Host "==========================================" -ForegroundColor Cyan
+
+
+        $Choice = Read-Host "`nSelect an option"
+        switch ($Choice.ToLower()) {
+            "1" {
+                Invoke-PortableTool -ToolName "InstallerClean" -ZipName "InstallerClean.zip" -DownloadUrl "https://github.com/Heroin-Bob/Powershell-scripts-for-backstage/releases/download/mirror/InstallerClean.zip" -ExePattern "*InstallerClean*.exe"
+            }
+            "2" { Remove-ZipFromTemp -ZipName "InstallerClean.zip" }
+            "3" { Remove-ToolFromTemp -ZipName "InstallerClean.zip" }
+            "b" { return }
+            Default { Write-Host "Invalid selection, try again." -ForegroundColor Red; Start-Sleep -Seconds 1 }
+        }
+        Pause-Menu "InstallerClean Menu"
+    }
+}
+
+
 # ==========================================
 # SUB-MENU: TOOLS
 # ==========================================
@@ -1078,6 +1109,12 @@ function Show-ToolsMenu {
         Write-Host "    Analyzes disk usage and finds large files and folders." -ForegroundColor Yellow
 
 
+        Write-Host " 12. InstallerClean (" -NoNewline
+        Write-Host "57.8 MB" -ForegroundColor Green -NoNewline
+        Write-Host ")"
+        Write-Host "    Safely cleans orphaned Windows Installer files and reclaims disk space." -ForegroundColor Yellow
+
+
         Write-Host "------------------------------------------"
         Write-Host " B. Back to Main Menu"
         Write-Host "==========================================" -ForegroundColor Cyan
@@ -1098,6 +1135,7 @@ function Show-ToolsMenu {
             "9" { Show-KeyboardTesterMenu }
             "10" { Show-SpeedtestCLIMenu }
             "11" { Show-TreeSizeFreeMenu }
+            "12" { Show-InstallerCleanMenu }
             "b" { return }
             Default {
                 Write-Host "Invalid selection, try again." -ForegroundColor Red
